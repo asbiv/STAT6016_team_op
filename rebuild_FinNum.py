@@ -25,8 +25,8 @@ token = json.loads(token_info.content.decode("utf8"))["access_token"]
 
 raw_list = [
         #'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_training.json',
-        'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_test.json'#,
-        #'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_dev.json'
+#        'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_test.json'#,
+        'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_dev.json'
         ]
 
 raw_local = [
@@ -77,4 +77,4 @@ for FinNum in raw_list: #["FinNum_training","FinNum_dev","FinNum_test"]:
     print("Missing data: " + str(len(not_found)))
     print("Total: " + str(len(data)) + " instances")
     
-    json.dump(data, open("FinNum_test" + "_rebuilded.json", 'w'))
+    json.dump(data, open("FinNum_dev" + "_rebuilded.json", 'w'))
