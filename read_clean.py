@@ -99,6 +99,3 @@ train_token = train_rm_stop.map(lambda x: preprocess(x))
 #CURRENT STATUS...
 print(train_df['tweet'][1])
 print(train_token[1])
-
-
-
