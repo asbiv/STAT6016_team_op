@@ -99,3 +99,52 @@ train_token = train_rm_stop.map(lambda x: preprocess(x))
 #CURRENT STATUS...
 print(train_df['tweet'][1])
 print(train_token[1])
+
+# LEMMATIZATION
+from nltk.stem import WordNetLemmatizer
+nltk.download('wordnet')
+lemmatizer = WordNetLemmatizer()
+
+def lemmatize(s):
+    s = lemmatizer.lemmatize(s, pos='n')
+    s = lemmatizer.lemmatize(s, pos='v')
+    return s
+
+def lemma_loop(s):
+    # Note: Train_token is a series of lists; lists function differently than
+    # series. So we convert to series prior to mapping.
+    return pd.Series(s).map(lambda x: lemmatize(x))
+
+# Map lemmatizing functions
+train_lemma = train_token.map(lambda x: lemma_loop(x))
+print(train_token[1], '\n', train_df['tweet'][1])
+
+# N-GRAM BAG OF WORDS
+from sklearn.feature_extraction.text import CountVectorizer
+
+vectorizer = CountVectorizer(ngram_range=(2,2))
+
+def vectorize(s):
+    s_untokenized = s.map(' '.join)
+    return vectorizer.fit_transform(s_untokenized).toarray()
+
+# Map bag of words function, join with lemmatized text
+train_bow = pd.DataFrame(vectorize(train_lemma))
+train_bow.shape
+train_bow['text'] = train_bow.index.map(train_lemma)
+
+print(train_bow.shape)
+
+# TF-IDF 
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+tfidf_vectorizer = TfidfVectorizer(ngram_range=(2,2))
+
+def tf_idf(s):
+    s_untokenized = s.map(' '.join)
+    return tfidf_vectorizer.fit_transform(s_untokenized).toarray()
+
+train_tfidf = pd.DataFrame(tf_idf(train_lemma))
+print(train_tfidf.shape)
+train_tfidf['text'] = train_tfidf.index.map(train_lemma)
+print(train_tfidf.shape)
