@@ -1,3 +1,6 @@
+# Based on my understanding of the paper, I created the vocabulary with tweets token as the input feature for SVM.
+# Still figuring out a way to change all the number to "D" as per the paper mentions. Working on that today
+
 from keras.preprocessing import text
 from keras.utils import np_utils
 from keras.preprocessing import sequence
