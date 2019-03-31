@@ -45,6 +45,44 @@ train_df['id'].head()
 #PREPROCESSING
 
 
+# EXPAND TWEETS WITH >1 TARGET
+
+# Don't want to mess up the main dataset, so creating a duplicate and initializing a counter for our function
+hold_df = pd.DataFrame([], columns = list(train_df.columns))
+to_drop = list()
+j = 0
+
+# Note: I recognize this could be broken up into different functions, but I'm tired so I'll just comment it a lot instead
+def dupe(s):
+    # Specify global objects if you're going to alter them in a function
+    global hold_df
+    global to_drop
+    global j
+    # If there is more than one target...
+    if len(s['target_num']) > 1:
+        # Create a temporary empty dataframe...
+        tmpdf = pd.DataFrame(columns=list(train_df.columns))
+        for i in range(0,len(s['target_num'])):
+            # Capture the relevant information for each target...
+            singlet = pd.DataFrame([[s['index'], s['category'][i], s['id'], s['idx'], s['subcategory'][i], s['target_num'][i], s['tweet']]], columns=list(train_df.columns))
+            tmpdf = tmpdf.append(singlet, ignore_index=True)
+        # Build a list of rows to drop, and add the records to our dataframe
+        to_drop.append(j)
+        hold_df = hold_df.append(tmpdf, ignore_index=True)
+    j += 1
+    # It takes a long time, so it's nice to know how far along you are
+    if j % 100 == 0:
+        print(j, " of ", train_df.shape[0], " records completed.")
+
+dupe_df = train_df.copy()
+dupe_df.apply(dupe, axis=1)
+
+# Drop records, pull out strings from lists for future application, and append expanded versions of records
+dupe_df = dupe_df.drop(to_drop)
+dupe_df['target_num'] = dupe_df['target_num'].map(lambda x: x[0])
+dupe_df = dupe_df.append(hold_df).reset_index().drop(columns="level_0")
+
+
 #REMOVE STOP WORDS
 import nltk
 from nltk.corpus import stopwords
@@ -61,13 +99,13 @@ def remove_stopwords(s):
      return cleanup
 
 train_rm_stop = train_df['tweet'].map(lambda x: remove_stopwords(x))
+train_rm_stop_dupe = dupe_df['tweet'].map(lambda x: remove_stopwords(x))
 
 
 # SUBSTITUTE ALL DIGITS WITH THE LETTER D
-train_digits = train_rm_stop.map(lambda x: re.sub('\d', 'D', x))
+train_d = train_rm_stop_dupe.map(lambda x: re.sub('\d', 'D', x))
 
-
-#TOLKENIZATION OF TWITTER ARTIFACTS
+#TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
 import re
 nltk.download('punkt')
@@ -96,9 +134,8 @@ def preprocess(s, lowercase=False):
     return tokens
 
 #Map preprocess
-train_token = train_rm_stop.map(lambda x: preprocess(x))
-train_token_d = train_digits.map(lambda x: preprocess(x))
-
+train_token = train_rm_stop_dupe.map(lambda x: preprocess(x))
+train_token_d = train_d.map(lambda x: preprocess(x))
 
 #CURRENT STATUS...
 # print(train_df['tweet'][1])
@@ -130,7 +167,74 @@ train_lemma.map(lambda x: doc_lengths.append(len(x)))
 doc_lengths[1]
 print('Minimum length of lemmatized tweet: ',min(doc_lengths),'\n','Average: ',sum(doc_lengths)/len(doc_lengths),'\n','Maximum: ',max(doc_lengths))
 
-print(len(train_lemma[1]))
+
+# POS_TAGGING
+train_pos = train_lemma.map(lambda x: nltk.pos_tag(x))
+train_pos.head()
+
+
+# INDEX LOCATION OF TARGET
+
+# Initialize counter and index list
+k = 0
+target_index = list()
+def index_target(s):
+    # Call out global variables
+    global k
+    global target_index
+    # Take only numbers before periods and commas (this was necessary because of inconsistencies in tokenization)
+    snum_int = s.map(lambda x: x.split('.',1)[0].split(',',1)[0])
+    # Remove all non-digit characters
+    snum = list(snum_int.map(lambda x: re.sub("[^0-9]","",x)))
+    # Define what we're looking for, and then do the same for it
+    tgt_raw = dupe_df.iloc[k]['target_num']
+    tgt_int = tgt_raw.split('.',1)[0].split(',',1)[0]
+    tgt = re.sub("[^0-9]","",tgt_int)
+    # Sadly, gave up on the last 23 errors and just said if you don't find it, put -1 instead
+    if tgt in snum:
+        target_index.append(snum.index(tgt))
+    else:
+        target_index.append(-1)
+    k += 1
+
+train_lemma.map(lambda x: index_target(x))
+len(target_index)
+
+# One-hot encode all target locations
+tgt_loc = pd.get_dummies(pd.Series(target_index))
+tgt_loc
+
+# Again, :( 23 errors
+target_index.count(-1)
+
+
+# ENCODE ALL CHARACTERS
+
+# This is very complicated, but it's doing is mapping each lemmatized tweet, 
+# concatenating the strings, mapping those, and collecting the unique characters (and sorting that list)
+all_char = sorted(list(set(train_lemma.map(lambda x: ''.join(set(''.join(x)))).str.cat(sep=''))))
+
+# Initialize character encoding vector
+char_vec = pd.DataFrame(0, index=np.arange(dupe_df.shape[0]), columns=all_char)
+l = 0
+
+# Update character encoding vector for each character found
+def char_enc1(s):
+    global char_vec
+    global l
+    char_vec.iloc[l][s] += 1
+
+# Map each character
+def char_enc(s):
+    global l
+    list(map(char_enc1, s))
+    if l % 100 == 0:
+        print(l)
+    l += 1
+
+# Map each tweet to encode it. WARNING: This takes a pretty long time, probably 1m+
+train_lemma.map(lambda x: char_enc(''.join(x)))
+char_vec.sum()
 
 
 # KEYWORDS AND RULES
@@ -139,31 +243,31 @@ keys = {"key_p": ["%","percent","pc","pct"],
         "key_m": ["january","jan","february","feb","march","mar","april","apr","may","june","jun","july","jul","august","aug","september","sept","sep","october","oct","november","nov","december","dec"],
         "key_i": ["ma","dma","sma","ema","rsi","ichimoku"],
         "key_d": ["day","week","month","year","mos","yrs"],
-        "key_t": ["second","sec","minute","min","mins","hour","hr","hrs","p.m.","pm","a.m."]}
+        "key_t": ["second","sec","minute","min","mins","hour","hr","hrs","p.m.","pm","a.m."],
+        "key_callput": ["call","put"]}
 
-keynames = ["key_p","key_r","key_m","key_i","key_d","key_t", "maturity","date"]
+keynames = ["key_p","key_r","key_m","key_i","key_d","key_t", "key_callput"]
 
 key_vars = pd.DataFrame([], columns=keynames)
 
-nltk.pos_tag(train_lemma[1])
-nltk.pos_tag(train_lemma_d[1])
+# Function to check if token is number
+def is_number(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
 
 def key_loop(s):
     global key_vars
     key_counts = pd.DataFrame(np.zeros((1,6)),columns=keynames)
-    for token in s:
-        keywords(token, key_counts)
-    key_vars = key_vars.append(key_counts.sum(), ignore_index=True)
-    # return pd.DataFrame(key_counts.sum())
-
-def keywords(token, df):
     for keylist in keys:
-        if token in keys[keylist] and df[keylist][0] < 1:
-            df[keylist][0] = 1
-    return df
+        if len(list(set(s) & set(keys[keylist]))) > 0:
+            key_counts[keylist] = 1
+    key_vars = key_vars.append(key_counts.sum(), ignore_index=True)
 
 train_lemma.map(lambda x: key_loop(x))
-
+print(key_vars.head())
 
 # N-GRAM BAG OF WORDS
 from sklearn.feature_extraction.text import CountVectorizer
@@ -180,6 +284,7 @@ train_bow = pd.DataFrame(vectorize(train_lemma))
 train_bow['text'] = train_bow.index.map(train_lemma)
 
 # print(train_bow.shape)
+
 
 # TF-IDF 
 from sklearn.feature_extraction.text import TfidfVectorizer
