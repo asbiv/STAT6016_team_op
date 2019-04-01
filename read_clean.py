@@ -6,6 +6,7 @@ import urllib.request
 
 
 #SET PATHS
+'''
 train_path = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_training.json'
 test_path = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_test.json'
 dev_path = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_dev.json'
@@ -23,6 +24,7 @@ with urllib.request.urlopen(test_path) as url:
 #As dfs
 train_df = pd.read_json(train_path)
 test_df = pd.read_json(test_path)
+'''
 
 
 #REBUILT DATA
@@ -39,12 +41,8 @@ test_rebuild_df = pd.read_json(test_rebuild)
 train_df = train_rebuild_df.dropna().reset_index()
 test_df = test_rebuild_df.dropna().reset_index()
 
-train_df.columns
-train_df['idx'].head()
-train_df['id'].head()
+
 #PREPROCESSING
-
-
 # EXPAND TWEETS WITH >1 TARGET
 
 # Don't want to mess up the main dataset, so creating a duplicate and initializing a counter for our function
