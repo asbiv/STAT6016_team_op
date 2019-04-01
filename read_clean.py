@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import json
 import urllib.request
+import re
 
 
 #SET PATHS
@@ -107,7 +108,6 @@ train_d = train_rm_stop_dupe.map(lambda x: re.sub('\d', 'D', x))
 
 #TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
-import re
 nltk.download('punkt')
 from nltk.tokenize import word_tokenize
 
@@ -260,7 +260,7 @@ def is_number(s):
 
 def key_loop(s):
     global key_vars
-    key_counts = pd.DataFrame(np.zeros((1,6)),columns=keynames)
+    key_counts = pd.DataFrame(np.zeros((1,7)),columns=keynames)
     for keylist in keys:
         if len(list(set(s) & set(keys[keylist]))) > 0:
             key_counts[keylist] = 1
