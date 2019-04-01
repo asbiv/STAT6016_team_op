@@ -1,13 +1,14 @@
 #LOAD LIBRARIES
 import pandas as pd
 import numpy as np
-import json
-import urllib.request
 import re
 
 
 #SET PATHS
 '''
+import json
+import urllib.request
+
 train_path = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_training.json'
 test_path = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_test.json'
 dev_path = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_dev.json'
@@ -97,12 +98,34 @@ def remove_stopwords(s):
      cleanup = " ".join(filter(lambda word: word not in stopset, s.split()))
      return cleanup
 
-train_rm_stop = train_df['tweet'].map(lambda x: remove_stopwords(x))
+#train_rm_stop = train_df['tweet'].map(lambda x: remove_stopwords(x))
+#Active df below
 train_rm_stop_dupe = dupe_df['tweet'].map(lambda x: remove_stopwords(x))
 
 
-# SUBSTITUTE ALL DIGITS WITH THE LETTER D
-train_d = train_rm_stop_dupe.map(lambda x: re.sub('\d', 'D', x))
+##MAKE SUBSTITUTIONS
+train_d = train_rm_stop_dupe.copy()
+
+#Remove emojis
+def de_emoji(s):
+    return s.encode('ascii', 'ignore').decode('ascii')
+
+#De-emoji
+train_d = train_d.map(lambda x: de_emoji(x))
+
+#ARTIFACT REPLACEMENT
+#Urls --> URL NOTE: URL moved to first because contains the later conversions
+train_d = train_d.map(lambda x: re.sub('http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', 'URL', x))
+#Digits --> D
+train_d = train_d.map(lambda x: re.sub('\d', 'D', x))
+#User ID --> ID
+train_d = train_d.map(lambda x: re.sub('@[\w_]+', 'ID', x))
+#Cashtag --> TICKER
+train_d = train_d.map(lambda x: re.sub('\$[\w_]+', 'TICKER', x))
+
+#CONVERT ALL TO LOWERCASE
+train_d = train_d.map(lambda x: x.lower())
+
 
 #TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
@@ -112,7 +135,7 @@ from nltk.tokenize import word_tokenize
 #Keep twitter elements in place
 regex_str = [
     r'<[^>]+>', # HTML tags
-    r'(?:\$[\w_]+)', # Ticker $
+    r'(?:\$[\w_]+)', # Cashtag
     r'(?:@[\w_]+)', # @-mentions
     r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)", # hash-tags
     r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', # URLs
@@ -121,19 +144,19 @@ regex_str = [
     r'(?:[\w_]+)', # other words
     r'(?:\S)' # anything else
 ]
-    
+
 tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
 
 def tokenize(s):
     return tokens_re.findall(s)
 
-def preprocess(s, lowercase=False):
+def find_twitter_tokens(s, lowercase=False):
     tokens = tokenize(s)
     return tokens
 
 #Map preprocess
-train_token = train_rm_stop_dupe.map(lambda x: preprocess(x))
-train_token_d = train_d.map(lambda x: preprocess(x))
+train_token = train_rm_stop_dupe.map(lambda x: find_twitter_tokens(x))
+#train_token_d = train_d.map(lambda x: find_twitter_tokens(x))
 
 #CURRENT STATUS...
 # print(train_df['tweet'][1])
@@ -157,16 +180,16 @@ def lemma_loop(s):
 
 # Map lemmatizing functions
 train_lemma = train_token.map(lambda x: lemma_loop(x))
-train_lemma_d = train_token_d.map(lambda x: lemma_loop(x))
+#train_lemma_d = train_token_d.map(lambda x: lemma_loop(x))
 
 # Summarize lengths of tweet documents
 doc_lengths = list()
 train_lemma.map(lambda x: doc_lengths.append(len(x)))
-doc_lengths[1]
 print('Minimum length of lemmatized tweet: ',min(doc_lengths),'\n','Average: ',sum(doc_lengths)/len(doc_lengths),'\n','Maximum: ',max(doc_lengths))
 
 
 # POS_TAGGING
+nltk.download('averaged_perceptron_tagger')
 train_pos = train_lemma.map(lambda x: nltk.pos_tag(x))
 train_pos.head()
 
@@ -195,6 +218,7 @@ def index_target(s):
         target_index.append(-1)
     k += 1
 
+# --> Outputs target_index
 train_lemma.map(lambda x: index_target(x))
 len(target_index)
 
@@ -208,7 +232,7 @@ target_index.count(-1)
 
 # ENCODE ALL CHARACTERS
 
-# This is very complicated, but it's doing is mapping each lemmatized tweet, 
+# This is very complicated, but all it's doing is mapping each lemmatized tweet, 
 # concatenating the strings, mapping those, and collecting the unique characters (and sorting that list)
 all_char = sorted(list(set(train_lemma.map(lambda x: ''.join(set(''.join(x)))).str.cat(sep=''))))
 
@@ -230,7 +254,8 @@ def char_enc(s):
         print(l)
     l += 1
 
-# Map each tweet to encode it. WARNING: This takes a pretty long time, probably 1m+
+# Map each tweet to encode it --> Outputs char_vec
+#WARNING: This takes a pretty long time, probably 1m+
 train_lemma.map(lambda x: char_enc(''.join(x)))
 char_vec.sum()
 
@@ -264,9 +289,21 @@ def key_loop(s):
             key_counts[keylist] = 1
     key_vars = key_vars.append(key_counts.sum(), ignore_index=True)
 
+# --> Outputs key_vars
 train_lemma.map(lambda x: key_loop(x))
 print(key_vars.head())
 
+
+##BUILD INPUT MATRIX
+#TODO
+
+
+
+
+
+
+
+###HOLD FOR NOW
 # N-GRAM BAG OF WORDS
 from sklearn.feature_extraction.text import CountVectorizer
 
