@@ -318,12 +318,30 @@ def pad_char_enc(l):
 
 char_enc_list_padded = pad_char_enc(char_enc_list_padded)
 
-#TODO
-#Flatten to produce char_vec
-#slist =[]
-#for x in char_enc_list_padded:
-#    slist.extend(x)
 
+#RECREATE CHAR_VEC FOR INPUT_MAT
+# This is very complicated, but all it's doing is mapping each lemmatized tweet, 
+# concatenating the strings, mapping those, and collecting the unique characters (and sorting that list)
+all_char = sorted(list(set(train_lemma.map(lambda x: ''.join(set(''.join(x)))).str.cat(sep=''))))
+# Initialize character encoding vector
+char_vec = pd.DataFrame(0, index=np.arange(dupe_df.shape[0]), columns=all_char)
+l = 0
+
+def char_enc1(s):
+    global char_vec
+    global l
+    char_vec.iloc[l][s] += 1
+    
+def char_enc(s):
+    global l
+    list(map(char_enc1, s))
+    if l % 100 == 0:
+        print(l)
+    l += 1
+# Map each tweet to encode it --> Outputs char_vec
+#WARNING: This takes a pretty long time, probably 1m+
+train_lemma.map(lambda x: char_enc(''.join(x)))
+char_vec.sum()
 
 
 # Find lengths of character vectors, max
@@ -361,7 +379,6 @@ def key_loop(s):
 
 # --> Outputs key_vars
 train_lemma.map(lambda x: key_loop(x))
-print(key_vars.head())
 
 
 #TODO
