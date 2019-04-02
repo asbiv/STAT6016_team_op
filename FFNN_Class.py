@@ -3,14 +3,10 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 os.chdir('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2')
 
-#IMPORT THE DATA
-####
-
 import tensorflow as tf
 import numpy      as np
 import pandas as pd
 import time
-
 
 input_mat = pd.read_csv('data/input_mat.csv')
 

@@ -2,31 +2,38 @@
 import pandas as pd
 import numpy as np
 import re
+import time
 
+
+start_time = time.time()
 
 ###########################
 ###  1. LOAD DATA    ###
 ###########################
 #SET PATHS
 train_rebuild = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_training_rebuilded.json'
-test_rebuild = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_test_rebuilded.json'
-dev_rebuild = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_dev_rebuilded.json'
+#test_rebuild = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_test_rebuilded.json'
+#dev_rebuild = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_dev_rebuilded.json'
 
 #Ignore dev for now
 train_rebuild_df = pd.read_json(train_rebuild)
-test_rebuild_df = pd.read_json(test_rebuild)
+#test_rebuild_df = pd.read_json(test_rebuild)
 
 #199 NANs in train
 train_df = train_rebuild_df.dropna().reset_index()
-test_df = test_rebuild_df.dropna().reset_index()
+#test_df = test_rebuild_df.dropna().reset_index()
 
 
-#PREPROCESSING
 
 ###########################
 ###  2. EXPAND TWEETS    ###
 ###########################
 # EXPAND TWEETS WITH >1 TARGET
+
+# Don't want to mess up the main dataset, so creating a duplicate and initializing a counter for our function
+hold_df = pd.DataFrame([], columns = list(train_df.columns))
+to_drop = list()
+j = 0
 
 # Note: I recognize this could be broken up into different functions, but I'm tired so I'll just comment it a lot instead
 def dupe(s):
@@ -50,11 +57,6 @@ def dupe(s):
     if j % 100 == 0:
         print("Expanding row",j, "of", train_df.shape[0])
 
-# Don't want to mess up the main dataset, so creating a duplicate and initializing a counter for our function
-hold_df = pd.DataFrame([], columns = list(train_df.columns))
-to_drop = list()
-j = 0
-
 dupe_df = train_df.copy()
 dupe_df.apply(dupe, axis=1)
 
@@ -64,6 +66,7 @@ dupe_df['target_num'] = dupe_df['target_num'].map(lambda x: x[0])
 dupe_df['category'] = dupe_df['category'].map(lambda x: x[0])
 dupe_df['subcategory'] = dupe_df['subcategory'].map(lambda x: x[0])
 dupe_df = dupe_df.append(hold_df).reset_index(drop=True)
+
 
 
 ###############################
@@ -87,6 +90,7 @@ def remove_stopwords(s):
 #train_rm_stop = train_df['tweet'].map(lambda x: remove_stopwords(x))
 #Active df below
 train_rm_stop_dupe = dupe_df['tweet'].map(lambda x: remove_stopwords(x))
+
 
 
 #################################
@@ -116,13 +120,13 @@ train_lower = train_cash.map(lambda x: x.lower())
 train_d = train_lower.map(lambda x: re.sub('\d', 'D', x))
 
 
+
 #########################################
 ###  5. TOKENIZE TWITTER ARTIFACTS    ###
 #########################################
 #TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
 nltk.download('punkt')
-from nltk.tokenize import word_tokenize
 
 #Keep twitter elements in place
 regex_str = [
@@ -148,6 +152,7 @@ def find_twitter_tokens(s, lowercase=False):
 
 #Map preprocess
 train_token = train_rm_stop_dupe.map(lambda x: find_twitter_tokens(x))
+
 
 
 #########################################
@@ -176,6 +181,7 @@ train_lemma = train_token.map(lambda x: lemma_loop(x))
 #doc_lengths = list()
 #train_lemma.map(lambda x: doc_lengths.append(len(x)))
 #print('Minimum length of lemmatized tweet: ',min(doc_lengths),'\n','Average: ',sum(doc_lengths)/len(doc_lengths),'\n','Maximum: ',max(doc_lengths))
+
 
 
 #########################################
@@ -231,38 +237,35 @@ char_enc_list_padded = pad_char_enc(char_enc_list_padded)
 ###  9. GET INDEX LOCATION OF TARGETS    ###
 ############################################
 
-<<<<<<< HEAD
-# NOTE: Ignore this token indexing - use the character index below
-'''
-def index_target(s):
+k = 0
+target_index = list()
+def index_target_loc(s):
     # Call out global variables
-    i = list(train_lemma.index(s))
+    global k
+    global target_index
     # Take only numbers before periods and commas (this was necessary because of inconsistencies in tokenization)
     snum_int = s.map(lambda x: x.split('.',1)[0].split(',',1)[0])
     # Remove all non-digit characters
     snum = list(snum_int.map(lambda x: re.sub("[^0-9]","",x)))
     # Define what we're looking for, and then do the same for it
-    tgt_raw = dupe_df.iloc[i]['target_num']
+    tgt_raw = dupe_df.iloc[k]['target_num']
     tgt_int = tgt_raw.split('.',1)[0].split(',',1)[0]
     tgt = re.sub("[^0-9]","",tgt_int)
     # Sadly, gave up on the last 23 errors and just said if you don't find it, put -1 instead
     if tgt in snum:
-        return snum.index(tgt)
+        target_index.append(snum.index(tgt))
     else:
-        return -1
-    
-list(train_lemma).index(train_lemma[0])
+        target_index.append(-1)
+    k += 1
+
 # --> Outputs target_index
-target_index = list(train_lemma.map(lambda x: index_target(x)))
+train_lemma.map(lambda x: index_target_loc(x))
 len(target_index)
 
 # One-hot encode all target locations
 tgt_loc = pd.get_dummies(pd.Series(target_index))
+tgt_loc
 
-# Again, :( 23 errors
-target_index.count(-1)
-'''
-=======
 # def index_target(s):
 #     # Call out global variables
 #     i = list(train_lemma).index(s)
@@ -289,7 +292,7 @@ target_index.count(-1)
 
 # # Again, :( 23 errors
 # target_index.count(-1)
->>>>>>> 91d4bcfc4358493c489506077ad9d4fbf86f7180
+
 
 # INDEX CHARACTER LOCATION OF TARGET
 def index_target(itarget):
@@ -307,7 +310,6 @@ def index_target(itarget):
 # Create a semi-unique id
 dupe_df['itarget'] = dupe_df['index'].map(str) + dupe_df['target_num']
 
-# --> Outputs tgt_loc
 target_char_index = list(dupe_df['itarget'].map(index_target))
 
 # 51 values that aren't being found :(
@@ -328,6 +330,11 @@ colpad = list(np.setdiff1d(numlist, collist))
 for x in colpad:
     tgt_loc_char[x] = 0
 
+
+
+############################################
+###  10. ADD KEYWORDS AND RULES          ###
+############################################
 # KEYWORDS AND RULES
 keys = {"key_p": ["%","percent","pc","pct"],
         "key_r": ["up","down","decline","increase","growth","gain","lose","+","-"],
@@ -362,13 +369,13 @@ train_lemma.map(lambda x: key_loop(x))
 
 
 ##############################################
-###  10. STACK EVERYTHING FOR CNN INPUT    ###
+###  11. STACK EVERYTHING FOR CNN INPUT    ###
 ##############################################
 
 # Stack character encoding lists of lists into individual dataframes and transpose them
 # NOTE: The numbering in the print statements is weird here - disregard it, 
 # it's purely an aesthetic issue, and a result of us restacking the same tweets multiple times for multiple targets.
-# Also takes quite a long time to run
+# NOTE: LONG RUN TIME
 def stack_char_list(s):
     i = list(char_enc_list_padded).index(s)
     tmpdf = pd.DataFrame.from_records(s)
@@ -409,9 +416,9 @@ def final_stack(s):
 final = char_enc_stack.map(final_stack)
 
 
-#RECREATE CHAR_VEC FOR INPUT_MAT
-# This is very complicated, but all it's doing is mapping each lemmatized tweet, 
-# concatenating the strings, mapping those, and collecting the unique characters (and sorting that list)
+###############################################
+###  12. RECREATE CHAR_VEC FOR INPUT_MAT    ###
+###############################################
 all_char = sorted(list(set(train_lemma.map(lambda x: ''.join(set(''.join(x)))).str.cat(sep=''))))
 # Initialize character encoding vector
 char_vec = pd.DataFrame(0, index=np.arange(dupe_df.shape[0]), columns=all_char)
@@ -431,24 +438,20 @@ def char_enc(s):
 # Map each tweet to encode it --> Outputs char_vec
 #WARNING: This takes a pretty long time, probably 1m+
 train_lemma.map(lambda x: char_enc(''.join(x)))
-char_vec.sum()
 
 
-# Find lengths of character vectors, max
-lenlist = list(map(len, char_enc_list))
-max(lenlist)
 
-
-#TODO
+###############################################
+###  13. BUILD INPUT MATRIX                 ###
+###############################################
 ##BUILD INPUT MATRIX
 #key_vars, char_vec, tgt_loc
 X_mat = pd.concat([key_vars, char_vec, tgt_loc], axis=1)
 y_train = dupe_df['category'].map(lambda x: x[0] if type(x) == list else x)
 input_mat = pd.concat([y_train, X_mat], axis=1)
 
-#input_mat.to_csv('data/input_mat.csv', index=False)
 
-
+'''
 ###HOLD FOR NOW
 # N-GRAM BAG OF WORDS
 from sklearn.feature_extraction.text import CountVectorizer
@@ -456,8 +459,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 vectorizer = CountVectorizer(ngram_range=(2,2))
 
 def vectorize(s):
-    s_untokenized = s.map(' '.join)
-    return vectorizer.fit_transform(s_untokenized).toarray()
+s_untokenized = s.map(' '.join)
+return vectorizer.fit_transform(s_untokenized).toarray()
 
 # Map bag of words function, join with lemmatized text
 train_bow = pd.DataFrame(vectorize(train_lemma))
@@ -473,10 +476,13 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 tfidf_vectorizer = TfidfVectorizer(ngram_range=(2,2))
 
 def tf_idf(s):
-    s_untokenized = s.map(' '.join)
-    return tfidf_vectorizer.fit_transform(s_untokenized).toarray()
+s_untokenized = s.map(' '.join)
+return tfidf_vectorizer.fit_transform(s_untokenized).toarray()
 
 train_tfidf = pd.DataFrame(tf_idf(train_lemma))
 # print(train_tfidf.shape)
 train_tfidf['text'] = train_tfidf.index.map(train_lemma)
 # print(train_tfidf.shape)
+'''
+
+print('Total time: {0} seconds'.format(time.time() - start_time))
