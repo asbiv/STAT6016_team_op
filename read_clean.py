@@ -160,7 +160,6 @@ train_lower = train_cash.map(lambda x: x.lower())
 #Digits --> D - Note: moving this to bottom for target locating below
 train_d = train_lower.map(lambda x: re.sub('\d', 'D', x))
 
-train_cash[147]
 
 #TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
@@ -234,11 +233,48 @@ train_pos.head()
 test_pos = test_lemma.map(lambda x: nltk.pos_tag(x))
 
 
+# ENCODE ALL CHARACTERS
+
+# Runs through all the basic unicode characters, creates a range, assigns 0's for everything except for the index of the character
+def onehot_char(char):
+    return [1 if i==ord(char) else 0 for i in range(32,126)]
+
+# Simply maps each string in a tweet to onehot_char above, returns a list of lists
+def onehot_charvec(s):
+    global m
+    if m % 100 == 0:
+        print("One-hot encoding characters on row",m)
+    m += 1
+    return [onehot_char(c) for c in list(s)]
+
+# Run to encode characters, check 'em out
+m = 0
+char_enc_list = train_lower.map(lambda x: onehot_charvec(''.join(x)))
+
+# Max size of character list = 165
+char_size = max(char_enc_list.map(len))
+char_size
+
+#Add lists of 0s to make sublists len of char_size
+import copy
+char_enc_list_padded = char_enc_list.copy()
+
+#WARNING: Long run time (~5 seconds)
+def pad_char_enc(l):
+    list_of_zeros = [0] * 94
+    for i in range(len(l)):
+        n = char_size - len(l[i])
+        for j in range(n):
+            l[i].append(list_of_zeros)
+    return(l)
+
+char_enc_list_padded = pad_char_enc(char_enc_list_padded)
+char_enc_list_padded[0]
+
 # INDEX LOCATION OF TARGET
 
 # INDEX TOKEN LOCATION OF TARGET
-# NOTE: Ignore this token indexing - using the character index below
-# Initialize counter and index list
+# NOTE: Ignore this token indexing - use the character index below
 
 def index_target(s):
     # Call out global variables
@@ -294,11 +330,11 @@ len(target_char_index)
 # 168 values with a non-unique itarget :(
 len(dupe_df) - dupe_df['itarget'].nunique()
 
-# One-hot encode, adding a single 183 and then dropping it for padding
+# One-hot encode target locations
 tgt_loc_char = pd.get_dummies(pd.Series(target_char_index))
 
 # Add in extra columns for values that don't exist
-numlist = list(range(-1, 161))
+numlist = list(range(-1, char_size))
 collist = list(tgt_loc_char.columns)
 colpad = list(np.setdiff1d(numlist, collist))
 
@@ -306,39 +342,50 @@ for x in colpad:
     tgt_loc_char[x] = 0
 
 
-# ENCODE ALL CHARACTERS
+# STACK EVERYTHING FOR CNN INPUT
 
-# Runs through all the basic unicode characters, creates a range, assigns 0's for everything except for the index of the character
-def onehot_char(char):
-    return [1 if i==ord(char) else 0 for i in range(32,126)]
+# Stack character encoding lists of lists into individual dataframes and transpose them
+# NOTE: The numbering in the print statements is weird here - disregard it, 
+# it's purely an aesthetic issue, and a result of us restacking the same tweets multiple times for multiple targets.
+# Also takes quite a long time to run
+def stack_char_list(s):
+    i = list(char_enc_list_padded).index(s)
+    tmpdf = pd.DataFrame.from_records(s)
+    if i % 100 == 0:
+        print("Stacking character encodings at element",i)
+    return tmpdf.transpose()
 
-# Simply maps each string in a tweet to onehot_char above, returns a list of lists
-def onehot_charvec(s):
-    global m
-    if m % 100 == 0:
-        print(m)
-    m += 1
-    return [onehot_char(c) for c in list(s)]
+char_enc_stack = char_enc_list_padded.map(stack_char_list)
 
-# Run to encode characters, check 'em out
-m = 0
-char_enc_list = train_d.map(lambda x: onehot_charvec(''.join(x)))
-len(char_enc_list[0])
+# Stack rule dataframe into char_size columns for CNN input
+n = 0
+def stack_rules(s):
+    global n
+    if n % 100 == 0:
+        print("Stacking rules at element",n)
+    n += 1
+    return pd.concat([s] * char_size, axis=1)
 
-#Add lists of 0s to make sublists len 183
-import copy
-char_enc_list_padded = char_enc_list.copy()
+# Takes a little bit of time!
+rule_stack = key_vars.apply(stack_rules, axis=1)
 
-#WARNING: Long run time (~5 seconds)
-def pad_char_enc(l):
-    list_of_zeros = [0] * 94
-    for i in range(len(l)):
-        n = 183 - len(l[i])
-        for j in range(n):
-            l[i].append(list_of_zeros)
-    return(l)
+# Create final dataframe
+o = 0
+tgt_loc_char.columns = list(range(0,165))
 
-char_enc_list_padded = pad_char_enc(char_enc_list_padded)
+# Select corresponding elements, make sure column names align, and stack them
+def final_stack(s):
+    global o
+    s.columns = list(range(0,165))
+    loc = tgt_loc_char.iloc[o]
+    rule = rule_stack[o]
+    rule.columns = list(range(0,165))
+    if o % 100 == 0:
+        print("Generating final stack for element",o)
+    o += 1
+    return pd.concat([s.append(loc),rule])
+
+final = char_enc_stack.map(final_stack)
 
 #TODO
 #Flatten to produce char_vec
