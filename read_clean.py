@@ -303,6 +303,38 @@ colpad = list(np.setdiff1d(numlist, collist))
 for x in colpad:
     tgt_loc_char[x] = 0
 
+# KEYWORDS AND RULES
+keys = {"key_p": ["%","percent","pc","pct"],
+        "key_r": ["up","down","decline","increase","growth","gain","lose","+","-"],
+        "key_m": ["january","jan","february","feb","march","mar","april","apr","may","june","jun","july","jul","august","aug","september","sept","sep","october","oct","november","nov","december","dec"],
+        "key_i": ["ma","dma","sma","ema","rsi","ichimoku"],
+        "key_d": ["day","week","month","year","mos","yrs"],
+        "key_t": ["second","sec","minute","min","mins","hour","hr","hrs","p.m.","pm","a.m."],
+        "key_callput": ["call","put"]}
+
+keynames = ["key_p","key_r","key_m","key_i","key_d","key_t", "key_callput"]
+
+key_vars = pd.DataFrame([], columns=keynames)
+
+# Function to check if token is number
+def is_number(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+def key_loop(s):
+    global key_vars
+    key_counts = pd.DataFrame(np.zeros((1,7)),columns=keynames)
+    for keylist in keys:
+        if len(list(set(s) & set(keys[keylist]))) > 0:
+            key_counts[keylist] = 1
+    key_vars = key_vars.append(key_counts.sum(), ignore_index=True)
+
+# --> Outputs key_vars
+train_lemma.map(lambda x: key_loop(x))
+
 
 # STACK EVERYTHING FOR CNN INPUT
 
@@ -378,39 +410,6 @@ char_vec.sum()
 # Find lengths of character vectors, max
 lenlist = list(map(len, char_enc_list))
 max(lenlist)
-
-
-# KEYWORDS AND RULES
-keys = {"key_p": ["%","percent","pc","pct"],
-        "key_r": ["up","down","decline","increase","growth","gain","lose","+","-"],
-        "key_m": ["january","jan","february","feb","march","mar","april","apr","may","june","jun","july","jul","august","aug","september","sept","sep","october","oct","november","nov","december","dec"],
-        "key_i": ["ma","dma","sma","ema","rsi","ichimoku"],
-        "key_d": ["day","week","month","year","mos","yrs"],
-        "key_t": ["second","sec","minute","min","mins","hour","hr","hrs","p.m.","pm","a.m."],
-        "key_callput": ["call","put"]}
-
-keynames = ["key_p","key_r","key_m","key_i","key_d","key_t", "key_callput"]
-
-key_vars = pd.DataFrame([], columns=keynames)
-
-# Function to check if token is number
-def is_number(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
-
-def key_loop(s):
-    global key_vars
-    key_counts = pd.DataFrame(np.zeros((1,7)),columns=keynames)
-    for keylist in keys:
-        if len(list(set(s) & set(keys[keylist]))) > 0:
-            key_counts[keylist] = 1
-    key_vars = key_vars.append(key_counts.sum(), ignore_index=True)
-
-# --> Outputs key_vars
-train_lemma.map(lambda x: key_loop(x))
 
 
 #TODO
