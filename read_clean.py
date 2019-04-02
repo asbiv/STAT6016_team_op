@@ -301,7 +301,30 @@ def onehot_charvec(s):
 # Run to encode characters, check 'em out
 m = 0
 char_enc_list = train_d.map(lambda x: onehot_charvec(''.join(x)))
-char_enc_list[0][0]
+len(char_enc_list[0])
+
+#Add lists of 0s to make sublists len 183
+import copy
+char_enc_list_padded = char_enc_list.copy()
+
+#WARNING: Long run time (~5 seconds)
+def pad_char_enc(l):
+    list_of_zeros = [0] * 94
+    for i in range(len(l)):
+        n = 183 - len(l[i])
+        for j in range(n):
+            l[i].append(list_of_zeros)
+    return(l)
+
+char_enc_list_padded = pad_char_enc(char_enc_list_padded)
+
+#TODO
+#Flatten to produce char_vec
+#slist =[]
+#for x in char_enc_list_padded:
+#    slist.extend(x)
+
+
 
 # Find lengths of character vectors, max
 lenlist = list(map(len, char_enc_list))
