@@ -294,13 +294,14 @@ train_lemma.map(lambda x: key_loop(x))
 print(key_vars.head())
 
 
-##BUILD INPUT MATRIX
 #TODO
+##BUILD INPUT MATRIX
+#key_vars, char_vec, tgt_loc
+X_mat = pd.concat([key_vars, char_vec, tgt_loc], axis=1)
+y_train = dupe_df['category'].map(lambda x: x[0] if type(x) == list else x)
+input_mat = pd.concat([y_train, X_mat], axis=1)
 
-
-
-
-
+#input_mat.to_csv('data/input_mat.csv', index=False)
 
 
 ###HOLD FOR NOW
