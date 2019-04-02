@@ -408,6 +408,7 @@ def final_stack(s):
     return pd.concat([s.append(loc),rule])
 
 final = char_enc_stack.map(final_stack)
+data = np.dstack(final.map(lambda x: np.asarray(x))).transpose([2,0,1])
 
 
 ###############################################
@@ -444,6 +445,29 @@ X_mat = pd.concat([key_vars, char_vec, tgt_loc], axis=1)
 y_train = dupe_df['category'].map(lambda x: x[0] if type(x) == list else x)
 input_mat = pd.concat([y_train, X_mat], axis=1)
 
+
+
+###############################################
+###  14. CREATE NUMERICAL Y                 ###
+###############################################
+
+def label_nums(s):
+    if s == "Monetary":
+        return 0
+    elif s == "Temporal":
+        return 1
+    elif s == "Percentage":
+        return 2
+    elif s == "Quantity":
+        return 3
+    elif s == "Option":
+        return 4
+    elif s == "Indicator":
+        return 5
+    else:
+        return 6
+
+y_raw = np.asarray(dupe_df['category'].map(label_nums))
 
 '''
 ###HOLD FOR NOW
