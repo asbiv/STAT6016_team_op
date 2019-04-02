@@ -84,38 +84,6 @@ dupe_df['category'] = dupe_df['category'].map(lambda x: x[0])
 dupe_df['subcategory'] = dupe_df['subcategory'].map(lambda x: x[0])
 dupe_df = dupe_df.append(hold_df).reset_index(drop=True)
 
-# Do the same to the test data
-# NOTE: Ignore this
-def dupe_test_f(s):
-    # Specify global objects if you're going to alter them in a function
-    global hold_df_test
-    global to_drop_test
-    global j
-    # If there is more than one target...
-    if len(s['target_num']) > 1:
-        # Create a temporary empty dataframe...
-        tmpdf = pd.DataFrame(columns=list(test_df.columns))
-        for i in range(0,len(s['target_num'])):
-            # Capture the relevant information for each target...
-            singlet = pd.DataFrame([[s['index'], s['id'], s['idx'], s['target_num'][i], s['tweet']]], columns=list(test_df.columns))
-            tmpdf = tmpdf.append(singlet, ignore_index=True)
-        # Build a list of rows to drop, and add the records to our dataframe
-        to_drop_test.append(j)
-        hold_df_test = hold_df_test.append(tmpdf, ignore_index=True)
-    j += 1
-    # It takes a long time, so it's nice to know how far along you are
-    if j % 100 == 0:
-        print(j, " of ", test_df.shape[0], " records completed.")
-
-hold_df_test = pd.DataFrame([], columns = list(test_df.columns))
-to_drop_test = list()
-j = 0
-dupe_test = test_df.copy()
-dupe_test.apply(dupe_test_f, axis=1)
-
-dupe_test = dupe_test.drop(to_drop_test)
-dupe_test['target_num'] = dupe_test['target_num'].map(lambda x: x[0])
-dupe_test = dupe_test.append(hold_df_test).reset_index(drop=True)
 
 #REMOVE STOP WORDS
 import nltk
@@ -190,9 +158,7 @@ def find_twitter_tokens(s, lowercase=False):
 
 #Map preprocess
 train_token = train_rm_stop_dupe.map(lambda x: find_twitter_tokens(x))
-test_token = test_rm_stop_dupe.map(lambda x: find_twitter_tokens(x))
 #train_token_d = train_d.map(lambda x: find_twitter_tokens(x))
-test_token_d = test_d.map(lambda x: find_twitter_tokens(x))
 
 #CURRENT STATUS...
 # print(train_df['tweet'][1])
@@ -216,9 +182,7 @@ def lemma_loop(s):
 
 # Map lemmatizing functions
 train_lemma = train_token.map(lambda x: lemma_loop(x))
-test_lemma = test_token.map(lambda x: lemma_loop(x))
 #train_lemma_d = train_token_d.map(lambda x: lemma_loop(x))
-test_lemma_d = test_token_d.map(lambda x: lemma_loop(x))
 
 # Summarize lengths of tweet documents
 doc_lengths = list()
@@ -230,7 +194,6 @@ print('Minimum length of lemmatized tweet: ',min(doc_lengths),'\n','Average: ',s
 nltk.download('averaged_perceptron_tagger')
 train_pos = train_lemma.map(lambda x: nltk.pos_tag(x))
 train_pos.head()
-test_pos = test_lemma.map(lambda x: nltk.pos_tag(x))
 
 
 # ENCODE ALL CHARACTERS
