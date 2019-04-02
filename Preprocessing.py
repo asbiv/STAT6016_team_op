@@ -176,12 +176,6 @@ def lemma_loop(s):
 # Map lemmatizing functions
 train_lemma = train_token.map(lambda x: lemma_loop(x))
 
-#DELETE??
-# Summarize lengths of tweet documents
-#doc_lengths = list()
-#train_lemma.map(lambda x: doc_lengths.append(len(x)))
-#print('Minimum length of lemmatized tweet: ',min(doc_lengths),'\n','Average: ',sum(doc_lengths)/len(doc_lengths),'\n','Maximum: ',max(doc_lengths))
-
 
 
 #########################################
@@ -323,7 +317,7 @@ len(dupe_df) - dupe_df['itarget'].nunique()
 tgt_loc_char = pd.get_dummies(pd.Series(target_char_index))
 
 # Add in extra columns for values that don't exist
-numlist = list(range(-1, char_size))
+numlist = list(range(-1, char_size-1))
 collist = list(tgt_loc_char.columns)
 colpad = list(np.setdiff1d(numlist, collist))
 
