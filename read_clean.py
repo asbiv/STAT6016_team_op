@@ -67,7 +67,7 @@ def dupe(s):
     j += 1
     # It takes a long time, so it's nice to know how far along you are
     if j % 100 == 0:
-        print(j, " of ", train_df.shape[0], " records completed.")
+        print("Expanding row",j, "of", train_df.shape[0])
 
 # Don't want to mess up the main dataset, so creating a duplicate and initializing a counter for our function
 hold_df = pd.DataFrame([], columns = list(train_df.columns))
@@ -239,33 +239,32 @@ char_enc_list_padded[0]
 # INDEX TOKEN LOCATION OF TARGET
 # NOTE: Ignore this token indexing - use the character index below
 
-def index_target(s):
-    # Call out global variables
-    i = list(train_lemma.index(s))
-    # Take only numbers before periods and commas (this was necessary because of inconsistencies in tokenization)
-    snum_int = s.map(lambda x: x.split('.',1)[0].split(',',1)[0])
-    # Remove all non-digit characters
-    snum = list(snum_int.map(lambda x: re.sub("[^0-9]","",x)))
-    # Define what we're looking for, and then do the same for it
-    tgt_raw = dupe_df.iloc[i]['target_num']
-    tgt_int = tgt_raw.split('.',1)[0].split(',',1)[0]
-    tgt = re.sub("[^0-9]","",tgt_int)
-    # Sadly, gave up on the last 23 errors and just said if you don't find it, put -1 instead
-    if tgt in snum:
-        return snum.index(tgt)
-    else:
-        return -1
-    
-list(train_lemma).index(train_lemma[0])
-# --> Outputs target_index
-target_index = list(train_lemma.map(lambda x: index_target(x)))
-len(target_index)
+# def index_target(s):
+#     # Call out global variables
+#     i = list(train_lemma).index(s)
+#     # Take only numbers before periods and commas (this was necessary because of inconsistencies in tokenization)
+#     snum_int = s.map(lambda x: x.split('.',1)[0].split(',',1)[0])
+#     # Remove all non-digit characters
+#     snum = list(snum_int.map(lambda x: re.sub("[^0-9]","",x)))
+#     # Define what we're looking for, and then do the same for it
+#     tgt_raw = dupe_df.iloc[i]['target_num']
+#     tgt_int = tgt_raw.split('.',1)[0].split(',',1)[0]
+#     tgt = re.sub("[^0-9]","",tgt_int)
+#     # Sadly, gave up on the last 23 errors and just said if you don't find it, put -1 instead
+#     if tgt in snum:
+#         return snum.index(tgt)
+#     else:
+#         return -1
 
-# One-hot encode all target locations
-tgt_loc = pd.get_dummies(pd.Series(target_index))
+# # --> Outputs target_index
+# target_index = list(train_lemma.map(lambda x: index_target(x)))
+# len(target_index)
 
-# Again, :( 23 errors
-target_index.count(-1)
+# # One-hot encode all target locations
+# tgt_loc = pd.get_dummies(pd.Series(target_index))
+
+# # Again, :( 23 errors
+# target_index.count(-1)
 
 # INDEX CHARACTER LOCATION OF TARGET
 def index_target(itarget):
