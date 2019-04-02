@@ -85,6 +85,7 @@ dupe_df['subcategory'] = dupe_df['subcategory'].map(lambda x: x[0])
 dupe_df = dupe_df.append(hold_df).reset_index(drop=True)
 
 # Do the same to the test data
+# NOTE: Ignore this
 def dupe_test_f(s):
     # Specify global objects if you're going to alter them in a function
     global hold_df_test
@@ -134,47 +135,32 @@ def remove_stopwords(s):
 #train_rm_stop = train_df['tweet'].map(lambda x: remove_stopwords(x))
 #Active df below
 train_rm_stop_dupe = dupe_df['tweet'].map(lambda x: remove_stopwords(x))
-test_rm_stop_dupe = dupe_test['tweet'].map(lambda x: remove_stopwords(x))
-
 
 ##MAKE SUBSTITUTIONS
-train_d = train_rm_stop_dupe.copy()
-test_d = test_rm_stop_dupe.copy()
+train_copy = train_rm_stop_dupe.copy()
 
 #Remove emojis
 def de_emoji(s):
     return s.encode('ascii', 'ignore').decode('ascii')
 
 #De-emoji
-train_d = train_d.map(lambda x: de_emoji(x))
-test_d = test_d.map(lambda x: de_emoji(x))
+train_emo = train_copy.map(lambda x: de_emoji(x))
 
 #ARTIFACT REPLACEMENT
 #Urls --> URL NOTE: URL moved to first because contains the later conversions
-train_d = train_d.map(lambda x: re.sub('http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', 'URL', x))
-#Digits --> D
-train_d = train_d.map(lambda x: re.sub('\d', 'D', x))
+train_url = train_emo.map(lambda x: re.sub('http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', 'URL', x))
 #User ID --> ID
-train_d = train_d.map(lambda x: re.sub('@[\w_]+', 'ID', x))
+train_id = train_url.map(lambda x: re.sub('@[\w_]+', 'ID', x))
 #Cashtag --> TICKER
-train_d = train_d.map(lambda x: re.sub('\$[\w_]+', 'TICKER', x))
+train_cash = train_id.map(lambda x: re.sub('\$[^0-9.][\w_]+', 'TICKER', x))
 
 #CONVERT ALL TO LOWERCASE
-train_d = train_d.map(lambda x: x.lower())
+train_lower = train_cash.map(lambda x: x.lower())
 
-#TEST ARTIFACT REPLACEMENT
-#Urls --> URL NOTE: URL moved to first because contains the later conversions
-test_d = test_d.map(lambda x: re.sub('http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', 'URL', x))
-#Digits --> D
-test_d = test_d.map(lambda x: re.sub('\d', 'D', x))
-#User ID --> ID
-test_d = test_d.map(lambda x: re.sub('@[\w_]+', 'ID', x))
-#Cashtag --> TICKER
-test_d = test_d.map(lambda x: re.sub('\$[\w_]+', 'TICKER', x))
+#Digits --> D - Note: moving this to bottom for target locating below
+train_d = train_lower.map(lambda x: re.sub('\d', 'D', x))
 
-#CONVERT ALL TO LOWERCASE
-test_d = test_d.map(lambda x: x.lower())
-
+train_cash[147]
 
 #TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
@@ -250,38 +236,74 @@ test_pos = test_lemma.map(lambda x: nltk.pos_tag(x))
 
 # INDEX LOCATION OF TARGET
 
+# INDEX TOKEN LOCATION OF TARGET
+# NOTE: Ignore this token indexing - using the character index below
 # Initialize counter and index list
-k = 0
-target_index = list()
+
 def index_target(s):
     # Call out global variables
-    global k
-    global target_index
+    i = list(train_lemma.index(s))
     # Take only numbers before periods and commas (this was necessary because of inconsistencies in tokenization)
     snum_int = s.map(lambda x: x.split('.',1)[0].split(',',1)[0])
     # Remove all non-digit characters
     snum = list(snum_int.map(lambda x: re.sub("[^0-9]","",x)))
     # Define what we're looking for, and then do the same for it
-    tgt_raw = dupe_df.iloc[k]['target_num']
+    tgt_raw = dupe_df.iloc[i]['target_num']
     tgt_int = tgt_raw.split('.',1)[0].split(',',1)[0]
     tgt = re.sub("[^0-9]","",tgt_int)
     # Sadly, gave up on the last 23 errors and just said if you don't find it, put -1 instead
     if tgt in snum:
-        target_index.append(snum.index(tgt))
+        return snum.index(tgt)
     else:
-        target_index.append(-1)
-    k += 1
-
+        return -1
+    
+list(train_lemma).index(train_lemma[0])
 # --> Outputs target_index
-train_lemma.map(lambda x: index_target(x))
+target_index = list(train_lemma.map(lambda x: index_target(x)))
 len(target_index)
 
 # One-hot encode all target locations
 tgt_loc = pd.get_dummies(pd.Series(target_index))
-tgt_loc
 
 # Again, :( 23 errors
 target_index.count(-1)
+
+# INDEX CHARACTER LOCATION OF TARGET
+def index_target(itarget):
+    # Set index to pull target from original df
+    i = list(dupe_df['itarget']).index(itarget)
+    target = dupe_df.iloc[i]['target_num']
+    # Pull tweet and make any non-digit characters spaces for consistency
+    twtnum = re.sub("[^0-9]"," ",train_lower[i])
+    tgt = re.sub("[^0-9]"," ",target)
+    if i % 500 == 0:
+        print("Indexing characters at row ", i)
+    # Return the string index of the target in the tweet
+    return twtnum.find(tgt)
+
+# Create a semi-unique id
+dupe_df['itarget'] = dupe_df['index'].map(str) + dupe_df['target_num']
+
+# --> Outputs tgt_loc
+target_char_index = list(dupe_df['itarget'].map(index_target))
+
+# 51 values that aren't being found :(
+target_char_index.count(-1)
+len(target_char_index)
+
+# 168 values with a non-unique itarget :(
+len(dupe_df) - dupe_df['itarget'].nunique()
+
+# One-hot encode, adding a single 183 and then dropping it for padding
+tgt_loc_char = pd.get_dummies(pd.Series(target_char_index))
+
+# Add in extra columns for values that don't exist
+numlist = list(range(-1, 161))
+collist = list(tgt_loc_char.columns)
+colpad = list(np.setdiff1d(numlist, collist))
+
+for x in colpad:
+    tgt_loc_char[x] = 0
 
 
 # ENCODE ALL CHARACTERS
@@ -347,6 +369,7 @@ char_vec.sum()
 # Find lengths of character vectors, max
 lenlist = list(map(len, char_enc_list))
 max(lenlist)
+
 
 # KEYWORDS AND RULES
 keys = {"key_p": ["%","percent","pc","pct"],
