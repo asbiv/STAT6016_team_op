@@ -80,8 +80,11 @@ dupe_df.apply(dupe, axis=1)
 # Drop records, pull out strings from lists for future application, and append expanded versions of records
 dupe_df = dupe_df.drop(to_drop)
 dupe_df['target_num'] = dupe_df['target_num'].map(lambda x: x[0])
+dupe_df['category'] = dupe_df['category'].map(lambda x: x[0])
+dupe_df['subcategory'] = dupe_df['subcategory'].map(lambda x: x[0])
 dupe_df = dupe_df.append(hold_df).reset_index().drop(columns="level_0")
-
+dupe_df.columns
+dupe_df['category']
 
 #REMOVE STOP WORDS
 import nltk
@@ -244,7 +247,8 @@ l = 0
 def char_enc1(s):
     global char_vec
     global l
-    char_vec.iloc[l][s] += 1
+    char_vectmp = pd.DataFrame(0, index = [0], columns=all_char)
+    return char_vectmp.iloc[0][s] = 1
 
 # Map each character
 def char_enc(s):
@@ -258,7 +262,6 @@ def char_enc(s):
 #WARNING: This takes a pretty long time, probably 1m+
 train_lemma.map(lambda x: char_enc(''.join(x)))
 char_vec.sum()
-
 
 # KEYWORDS AND RULES
 keys = {"key_p": ["%","percent","pc","pct"],
