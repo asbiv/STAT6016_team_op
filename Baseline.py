@@ -21,7 +21,7 @@ dupe_df['subcategory'] = dupe_df['subcategory'].map(lambda x: x[0] if type(x) ==
 category = dupe_df.loc[:,'category'].map(str) + " " + dupe_df.loc[:,'subcategory'].map(str)
 category = category.to_frame(name='category-subcategory')
 category = category.merge(y_value, on='category-subcategory')
-y_value = category.loc[:,'value']
+y_value = category.loc[:,'value'].to_frame(name='value')
 
 # ===========================================================================================================
 # create x.train
@@ -33,7 +33,7 @@ x_value = pd.DataFrame(columns=["%","percent","pc","pct","up","down","decline","
                                 "october","oct","november","nov","december","dec","ma","dma","sma","ema",
                                 "rsi","ichimoku","day","week","month","year","mos","yrs","second","sec",
                                 "minute","min","mins","hour","hr","hrs","p.m.","pm","a.m.","call","put"],
-                        index=range(300))
+                        index=range(6521))
 
 for i in range(0,6521):
     for a in range(0,len(train_token[i])):
@@ -83,10 +83,7 @@ y_train = y_train.astype(int)
 y_test = y_test.iloc[:,0]
 y_test = y_test.astype(int)
 
-clf = svm.SVC(kernel='linear') # Linear Kernel
-clf.fit(X_train, y_train)
-
-y_pred = clf.predict(X_test)
-
-print("Accuracy:",metrics.accuracy_score(y_test, y_pred))
+finnum = svm.SVC(kernel='rbf',C=1,gamma=100).fit(X_train, y_train)
+y_pred = finnum.predict(X_test)
+finnum.score(X_test, y_test) 
 cm = confusion_matrix(y_test, y_pred) 
