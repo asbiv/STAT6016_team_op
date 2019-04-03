@@ -468,6 +468,7 @@ def label_nums(s):
         return 6
 
 y_raw = np.asarray(dupe_df['category'].map(label_nums))
+list(y_raw)
 
 '''
 ###HOLD FOR NOW
