@@ -88,7 +88,7 @@ Y_proba = tf.nn.softmax(logits, name="Y_proba")
 # Step 5: Define the optimizer; taking as input (learning_rate) and (loss)
 xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=y)
 loss = tf.reduce_mean(xentropy)
-optimizer = tf.train.MomentumOptimizer(0.01, 0.99)
+optimizer = tf.train.AdamOptimizer()
 training_op = optimizer.minimize(loss)
 
 # Step 6: Define the evaluation metric
