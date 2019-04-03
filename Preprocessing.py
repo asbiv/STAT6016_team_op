@@ -177,12 +177,6 @@ def lemma_loop(s):
 # Map lemmatizing functions
 train_lemma = train_token.map(lambda x: lemma_loop(x))
 
-#DELETE??
-# Summarize lengths of tweet documents
-#doc_lengths = list()
-#train_lemma.map(lambda x: doc_lengths.append(len(x)))
-#print('Minimum length of lemmatized tweet: ',min(doc_lengths),'\n','Average: ',sum(doc_lengths)/len(doc_lengths),'\n','Maximum: ',max(doc_lengths))
-
 
 
 #########################################
@@ -324,7 +318,7 @@ len(dupe_df) - dupe_df['itarget'].nunique()
 tgt_loc_char = pd.get_dummies(pd.Series(target_char_index))
 
 # Add in extra columns for values that don't exist
-numlist = list(range(-1, char_size))
+numlist = list(range(-1, char_size-1))
 collist = list(tgt_loc_char.columns)
 colpad = list(np.setdiff1d(numlist, collist))
 
@@ -415,6 +409,7 @@ def final_stack(s):
     return pd.concat([s.append(loc),rule])
 
 final = char_enc_stack.map(final_stack)
+data = np.dstack(final.map(lambda x: np.asarray(x))).transpose([2,0,1])
 
 
 ###############################################
@@ -451,6 +446,30 @@ X_mat = pd.concat([key_vars, char_vec, tgt_loc], axis=1)
 y_train = dupe_df['category'].map(lambda x: x[0] if type(x) == list else x)
 input_mat = pd.concat([y_train, X_mat], axis=1)
 
+
+
+###############################################
+###  14. CREATE NUMERICAL Y                 ###
+###############################################
+
+def label_nums(s):
+    if s == "Monetary":
+        return 0
+    elif s == "Temporal":
+        return 1
+    elif s == "Percentage":
+        return 2
+    elif s == "Quantity":
+        return 3
+    elif s == "Option":
+        return 4
+    elif s == "Indicator":
+        return 5
+    else:
+        return 6
+
+y_raw = np.asarray(dupe_df['category'].map(label_nums))
+list(y_raw)
 
 '''
 ###HOLD FOR NOW
