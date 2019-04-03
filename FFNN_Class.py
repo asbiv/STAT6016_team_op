@@ -46,6 +46,7 @@ X, label = iterator.get_next()
 train_init = iterator.make_initializer(train_data) # initializer for train_data
 
 #Create weights and biases
+'''
 #TWO LAYERS
 w1 = tf.get_variable(name='w1', shape=(140, 90),
                     initializer=tf.random_normal_initializer(0, 0.01))
@@ -58,12 +59,35 @@ w3 = tf.get_variable(name='w3', shape=(50, 7),
 b1 = tf.get_variable(name='b1', shape=(1, 90), initializer=tf.zeros_initializer())
 b2 = tf.get_variable(name='b2', shape=(1, 50), initializer=tf.zeros_initializer())
 b3 = tf.get_variable(name='b3', shape=(1, 7), initializer=tf.zeros_initializer())
+'''
+#THREE LAYER
+w1 = tf.get_variable(name='w1', shape=(140, 100),
+                    initializer=tf.random_normal_initializer(0, 0.01))
+w2 = tf.get_variable(name='w2', shape=(100, 60),
+                    initializer=tf.random_normal_initializer(0, 0.01))
+w3 = tf.get_variable(name='w3', shape=(60, 20),
+                    initializer=tf.random_normal_initializer(0, 0.01))
+w4 = tf.get_variable(name='w4', shape=(20, 7),
+                    initializer=tf.random_normal_initializer(0, 0.01))
 
-
+#b is the bias, sort of like an intercept term
+b1 = tf.get_variable(name='b1', shape=(1, 100), initializer=tf.zeros_initializer())
+b2 = tf.get_variable(name='b2', shape=(1, 60), initializer=tf.zeros_initializer())
+b3 = tf.get_variable(name='b3', shape=(1, 20), initializer=tf.zeros_initializer())
+b4 = tf.get_variable(name='b4', shape=(1, 7), initializer=tf.zeros_initializer())
+'''
 #TWO LAYER
 hidden1 = tf.nn.relu(tf.matmul(X, w1) + b1)
 hidden2 = tf.nn.relu(tf.matmul(hidden1, w2) + b2)
 logits = tf.matmul(hidden2, w3) + b3
+
+'''
+#THREE LAYER
+hidden1 = tf.nn.relu(tf.matmul(X, w1) + b1)
+hidden2 = tf.nn.relu(tf.matmul(hidden1, w2) + b2)
+hidden3 = tf.nn.relu(tf.matmul(hidden2, w3) + b3)
+logits = tf.matmul(hidden3, w4) + b4
+
 
 # Step 5: define loss function
 # use cross entropy of softmax of logits as the loss function
@@ -73,7 +97,8 @@ loss = tf.reduce_mean(entropy, name='loss')
 
 # Step 6: define optimizer
 # using Adamn Optimizer with pre-defined learning rate to minimize loss
-optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+#optimizer = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+optimizer = tf.train.AdagradOptimizer(learning_rate).minimize(loss)
 
 
 # Step 7: calculate accuracy with training set
@@ -90,11 +115,11 @@ acc_summary = tf.summary.scalar('accuracy_line', tf.reduce_mean(accuracy))
 
 with tf.Session() as sess:
     #Init writer
-    #writer = tf.summary.FileWriter('./graphs/logreg', tf.get_default_graph())
+    writer = tf.summary.FileWriter('./graphs/logreg', tf.get_default_graph())
 
     start_time = time.time()
     sess.run(tf.global_variables_initializer())
-    #saver = tf.train.Saver() #Initialize model saver
+    saver = tf.train.Saver() #Initialize model saver
 
     for i in range(n_epochs): #Train model by number of epochs
         sess.run(train_init)	# drawing samples from train_data
@@ -104,12 +129,12 @@ with tf.Session() as sess:
         accuracy_sum = 0
         
         #ADD TO SUMMARY
-        #summary_train_ent = sess.run(ent_summary)
-        #writer.add_summary(summary_train_ent, i)
-        #summary_train_loss = sess.run(loss_summary)
-        #writer.add_summary(summary_train_loss, i)
-        #summary_train_acc = sess.run(acc_summary)
-        #writer.add_summary(summary_train_acc, i)
+        summary_train_ent = sess.run(ent_summary)
+        writer.add_summary(summary_train_ent, i)
+        summary_train_loss = sess.run(loss_summary)
+        writer.add_summary(summary_train_loss, i)
+        summary_train_acc = sess.run(acc_summary)
+        writer.add_summary(summary_train_acc, i)
         
         try:
             while True:
@@ -133,4 +158,4 @@ with tf.Session() as sess:
     #print ("Model saved in file: ", save_path)
     print('Total time: {0} seconds'.format(time.time() - start_time))
     
-#writer.close()
+writer.close()

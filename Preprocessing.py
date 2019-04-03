@@ -449,7 +449,7 @@ input_mat = pd.concat([y_train, X_mat], axis=1)
 
 
 ###############################################
-###  14. CREATE NUMERICAL Y                 ###
+###      CREATE NUMERICAL Y                 ###
 ###############################################
 
 def label_nums(s):
