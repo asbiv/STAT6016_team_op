@@ -35,7 +35,7 @@ x_value = pd.DataFrame(columns=["%","percent","pc","pct","up","down","decline","
                                 "minute","min","mins","hour","hr","hrs","p.m.","pm","a.m.","call","put"],
                         index=range(300))
 
-for i in range(0,300):
+for i in range(0,6521):
     for a in range(0,len(train_token[i])):
         for b in range(0,62):
             x_value.iloc[i,b] = 1 if train_token[i][a] == x_value.columns[b] else 0 
@@ -77,7 +77,11 @@ for i in range(0,300):
 #x_value = key_vars
 
 # build SVM
-X_train, X_test, y_train, y_test = train_test_split(x_value, y_value[0:300], test_size=0.3)
+X_train, X_test, y_train, y_test = train_test_split(x_value, y_value, test_size=0.3)
+y_train = y_train.iloc[:,0]
+y_train = y_train.astype(int)
+y_test = y_test.iloc[:,0]
+y_test = y_test.astype(int)
 
 clf = svm.SVC(kernel='linear') # Linear Kernel
 clf.fit(X_train, y_train)
