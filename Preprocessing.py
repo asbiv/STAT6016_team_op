@@ -8,7 +8,7 @@ import time
 start_time = time.time()
 
 ###########################
-###  1. LOAD DATA    ###
+###   LOAD DATA    ###
 ###########################
 #SET PATHS
 train_rebuild = 'https://raw.githubusercontent.com/asbiv/STAT6016_team_op/master/data/FinNum_training_rebuilded.json'
@@ -26,7 +26,7 @@ train_df = train_rebuild_df.dropna().reset_index()
 
 
 ###########################
-###  2. EXPAND TWEETS    ###
+###  1. EXPAND TWEETS    ###
 ###########################
 # EXPAND TWEETS WITH >1 TARGET
 
@@ -67,10 +67,12 @@ dupe_df['category'] = dupe_df['category'].map(lambda x: x[0])
 dupe_df['subcategory'] = dupe_df['subcategory'].map(lambda x: x[0])
 dupe_df = dupe_df.append(hold_df).reset_index(drop=True)
 
+dupe_df['subcategory'].value_counts()
+
 
 
 ###############################
-###  3. REMOVE STOPWORDS    ###
+###  2. REMOVE STOPWORDS    ###
 ###############################
 #REMOVE STOP WORDS
 import nltk
@@ -94,7 +96,7 @@ train_rm_stop_dupe = dupe_df['tweet'].map(lambda x: remove_stopwords(x))
 
 
 #################################
-###  4. MAKE SUBSTITUTIONS    ###
+###  3. MAKE SUBSTITUTIONS    ###
 #################################
 train_copy = train_rm_stop_dupe.copy()
 
@@ -105,7 +107,6 @@ def de_emoji(s):
 #De-emoji
 train_emo = train_copy.map(lambda x: de_emoji(x))
 
-#ARTIFACT REPLACEMENT
 #Urls --> URL NOTE: URL moved to first because contains the later conversions
 train_url = train_emo.map(lambda x: re.sub('http[s]?://(?:[a-z]|[0-9]|[$-_@.&amp;+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+', 'URL', x))
 #User ID --> ID
@@ -122,7 +123,7 @@ train_d = train_lower.map(lambda x: re.sub('\d', 'D', x))
 
 
 #########################################
-###  5. TOKENIZE TWITTER ARTIFACTS    ###
+###  4. TOKENIZE TWITTER ARTIFACTS    ###
 #########################################
 #TOKENIZATION OF TWITTER ARTIFACTS
 #Building off this: https://marcobonzanini.com/2015/03/09/mining-twitter-data-with-python-part-2/
@@ -156,7 +157,7 @@ train_token = train_rm_stop_dupe.map(lambda x: find_twitter_tokens(x))
 
 
 #########################################
-###  6. LEMMATIZE                     ###
+###  5. LEMMATIZE                     ###
 #########################################
 # LEMMATIZATION
 from nltk.stem import WordNetLemmatizer
@@ -185,7 +186,7 @@ train_lemma = train_token.map(lambda x: lemma_loop(x))
 
 
 #########################################
-###  7. TAG PARTS OF SPEECH           ###
+###  6. TAG PARTS OF SPEECH           ###
 #########################################
 
 # POS_TAGGING
@@ -195,7 +196,7 @@ train_pos = train_lemma.map(lambda x: nltk.pos_tag(x))
 
 
 #########################################
-###  8. ENCODE CHARACTERS             ###
+###  7. ENCODE CHARACTERS             ###
 #########################################
 # ENCODE ALL CHARACTERS
 # Runs through all the basic unicode characters, creates a range, assigns 0's for everything except for the index of the character
@@ -234,7 +235,7 @@ char_enc_list_padded = pad_char_enc(char_enc_list_padded)
 
 
 ############################################
-###  9. GET INDEX LOCATION OF TARGETS    ###
+###  8. GET INDEX LOCATION OF TARGETS    ###
 ############################################
 
 k = 0
@@ -333,7 +334,7 @@ for x in colpad:
 
 
 ############################################
-###  10. ADD KEYWORDS AND RULES          ###
+###  9. ADD KEYWORDS AND RULES          ###
 ############################################
 # KEYWORDS AND RULES
 keys = {"key_p": ["%","percent","pc","pct"],
@@ -369,7 +370,7 @@ train_lemma.map(lambda x: key_loop(x))
 
 
 ##############################################
-###  11. STACK EVERYTHING FOR CNN INPUT    ###
+###      STACK EVERYTHING FOR CNN INPUT    ###
 ##############################################
 
 # Stack character encoding lists of lists into individual dataframes and transpose them
@@ -417,7 +418,7 @@ final = char_enc_stack.map(final_stack)
 
 
 ###############################################
-###  12. RECREATE CHAR_VEC FOR INPUT_MAT    ###
+###      RECREATE CHAR_VEC FOR INPUT_MAT    ###
 ###############################################
 all_char = sorted(list(set(train_lemma.map(lambda x: ''.join(set(''.join(x)))).str.cat(sep=''))))
 # Initialize character encoding vector
@@ -442,7 +443,7 @@ train_lemma.map(lambda x: char_enc(''.join(x)))
 
 
 ###############################################
-###  13. BUILD INPUT MATRIX                 ###
+###      BUILD INPUT MATRIX                 ###
 ###############################################
 ##BUILD INPUT MATRIX
 #key_vars, char_vec, tgt_loc
