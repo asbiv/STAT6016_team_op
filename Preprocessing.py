@@ -471,6 +471,14 @@ def label_nums(s):
 y_raw = np.asarray(dupe_df['category'].map(label_nums))
 list(y_raw)
 
+
+###############################################
+###      WRITE DATA TO DISK                 ###
+###############################################
+np.save('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/data/preprocessed_X.npy', data)
+np.save('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/data/preprocessed_y.npy', y_raw)
+
+
 '''
 ###HOLD FOR NOW
 # N-GRAM BAG OF WORDS
