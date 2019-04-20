@@ -43,7 +43,8 @@ xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y,
                                                           logits=logits)
 
 loss = tf.reduce_mean(xentropy)
-optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+#optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
+optimizer = tf.train.AdagradOptimizer(learning_rate=learning_rate)
 training_op = optimizer.minimize(loss)
 
 correct = tf.nn.in_top_k(logits, y, 1)
@@ -84,7 +85,7 @@ def shuffle_batch(X, y, batch_size):
 X_test = X_test.reshape((-1, width, height))
 
 n_epochs = 100
-batch_size = 150
+batch_size = 50
 
 with tf.Session() as sess:
     init.run()
