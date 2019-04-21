@@ -5,8 +5,9 @@ import sys
 sys.path.append('..')
 import time
 import numpy as np
-
 import tensorflow as tf
+os.chdir('/Users/Ab/Desktop/hw4')
+import utils
 
 #READ IN LOCAL DATA
 data = np.load('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/data/preprocessed_X.npy')
@@ -85,7 +86,7 @@ def shuffle_batch(X, y, batch_size):
 X_test = X_test.reshape((-1, width, height))
 
 n_epochs = 100
-batch_size = 50
+batch_size = 100
 
 with tf.Session() as sess:
     init.run()
