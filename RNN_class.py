@@ -1,3 +1,9 @@
+##########################
+###   CHANGE TO RUN   ####
+##########################
+local_path = '/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/'
+
+
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 import random
@@ -6,12 +12,12 @@ sys.path.append('..')
 import time
 import numpy as np
 import tensorflow as tf
-os.chdir('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/')
+os.chdir(local_path)
 from utils import *
 
 #READ IN LOCAL DATA
-data = np.load('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/data/preprocessed_X.npy')
-y_raw = np.load('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/data/preprocessed_y.npy')
+data = np.load(local_path + 'data/preprocessed_X.npy')
+y_raw = np.load(local_path + 'data/preprocessed_y.npy')
 
 
 # reset_graph()
@@ -121,10 +127,10 @@ with tf.Session() as sess:
         print(epoch, "Last batch accuracy:", acc_batch, "Test accuracy:", acc_test, "Loss:", loss_val)
         #LOGGER
         # To log training accuracy.
-        logger = Logger('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/logger/acc_val')
+        logger = Logger(local_path + 'logger/acc_val')
         logger.log_scalar('Test Accuracy', acc_test, epoch_number)
         #Best loss
-        logger2 = Logger('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/logger/loss_val')
+        logger2 = Logger(local_path + 'logger/loss_val')
         logger2.log_scalar('Test Loss', loss_val, epoch_number)
         #EARLY STOPPING
         if checks_since_last_progress > max_checks_without_progress:
