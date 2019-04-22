@@ -6,8 +6,8 @@ sys.path.append('..')
 import time
 import numpy as np
 import tensorflow as tf
-os.chdir('/Users/Ab/Desktop/hw4')
-import utils
+os.chdir('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/')
+from utils import *
 
 #READ IN LOCAL DATA
 data = np.load('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/data/preprocessed_X.npy')
@@ -88,14 +88,52 @@ X_test = X_test.reshape((-1, width, height))
 n_epochs = 100
 batch_size = 100
 
+iteration = 0
+best_loss_val = np.infty
+check_interval = 500
+checks_since_last_progress = 0
+max_checks_without_progress = 20
+best_model_params = None
+
+writer = tf.summary.FileWriter('./graphs/logreg', tf.get_default_graph())
+
 with tf.Session() as sess:
     init.run()
+    epoch_number = 0
     for epoch in range(n_epochs):
+        epoch_number += 1
         for X_batch, y_batch in shuffle_batch(X_train, y_train, batch_size):
+            iteration += 1
             #X_batch = X_batch.reshape((-1, n_steps, n_inputs))
             #TOP
             X_batch = X_batch.reshape((-1, width, height))
             sess.run(training_op, feed_dict={X: X_batch, y: y_batch})
+            if iteration % check_interval == 0:
+                loss_val = loss.eval(feed_dict={X: X_test, y: y_test})
+                if loss_val < best_loss_val:
+                    best_loss_val = loss_val
+                    checks_since_last_progress = 0
+                else:
+                    checks_since_last_progress += 1
         acc_batch = accuracy.eval(feed_dict={X: X_batch, y: y_batch})
         acc_test = accuracy.eval(feed_dict={X: X_test, y: y_test})
-        print(epoch, "Last batch accuracy:", acc_batch, "Test accuracy:", acc_test)
+        loss_val = loss.eval(feed_dict={X: X_test, y: y_test})
+        print(epoch, "Last batch accuracy:", acc_batch, "Test accuracy:", acc_test, "Loss:", loss_val)
+        #LOGGER
+        # To log training accuracy.
+        logger = Logger('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/logger/acc_val')
+        logger.log_scalar('Test Accuracy', acc_test, epoch_number)
+        #Best loss
+        logger2 = Logger('/Users/Ab/Desktop/SYS6016_Local/team_op/phase_2/logger/loss_val')
+        logger2.log_scalar('Test Loss', loss_val, epoch_number)
+        #EARLY STOPPING
+        if checks_since_last_progress > max_checks_without_progress:
+            print("Early stopping!")
+            break
+
+
+
+
+
+
+
